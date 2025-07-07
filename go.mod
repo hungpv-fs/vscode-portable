@@ -1,6 +1,6 @@
-module github.com/portapps/vscode-portable
+module github.com/hungpv-fs/vscode-portable
 
-go 1.24.0
+go 1.24.3
 
 require github.com/portapps/portapps/v3 v3.16.0
 
