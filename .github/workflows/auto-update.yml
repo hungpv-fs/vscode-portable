@@ -1,0 +1,130 @@
+---
+name: Auto Update VS Code
+
+"on":
+  schedule:
+    # Run at midnight UTC on Sunday (0 0 * * 0)
+    - cron: '0 0 * * 0'
+    # Run at midnight UTC on Wednesday (0 0 * * 3)
+    - cron: '0 0 * * 3'
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  check-and-update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get latest VS Code version
+        id: get_version
+        run: |
+          # Get latest release from VS Code repository
+          LATEST_VERSION=$(curl -s \
+            https://api.github.com/repos/microsoft/vscode/releases/latest \
+            | jq -r '.tag_name')
+
+          # Validate version format (should be like 1.xx.x)
+          if ! echo "$LATEST_VERSION" | \
+               grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "ERROR: Invalid version format: $LATEST_VERSION"
+            exit 1
+          fi
+
+          echo "Latest VS Code version: $LATEST_VERSION"
+          echo "latest_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Get current version
+        id: current_version
+        run: |
+          CURRENT_VERSION=$(grep "^app.version" build.properties \
+            | cut -d'=' -f2 | tr -d ' ')
+          echo "Current version: $CURRENT_VERSION"
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Compare versions
+        id: compare
+        run: |
+          if [ "${{ steps.get_version.outputs.latest_version }}" != \
+               "${{ steps.current_version.outputs.current_version }}" ]; then
+            echo "New version available: \
+              ${{ steps.get_version.outputs.latest_version }}"
+            echo "needs_update=true" >> $GITHUB_OUTPUT
+          else
+            echo "Already up to date"
+            echo "needs_update=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update build.properties
+        if: steps.compare.outputs.needs_update == 'true'
+        run: |
+          NEW_VERSION="${{ steps.get_version.outputs.latest_version }}"
+
+          # Get current release number and increment it
+          CURRENT_RELEASE=$(grep "^app.release" build.properties \
+            | cut -d'=' -f2 | tr -d ' ')
+          NEW_RELEASE=$((CURRENT_RELEASE + 1))
+
+          # Update version and release
+          sed -i "s/^app.version = .*/app.version = $NEW_VERSION/" \
+            build.properties
+          sed -i "s/^app.release = .*/app.release = $NEW_RELEASE/" \
+            build.properties
+
+          echo "Updated to version $NEW_VERSION, release $NEW_RELEASE"
+
+      - name: Update CHANGELOG.md
+        if: steps.compare.outputs.needs_update == 'true'
+        run: |
+          NEW_VERSION="${{ steps.get_version.outputs.latest_version }}"
+          CURRENT_RELEASE=$(grep "^app.release" build.properties \
+            | cut -d'=' -f2 | tr -d ' ')
+          CURRENT_DATE=$(date +%Y/%m/%d)
+
+          # Create new changelog entry
+          NEW_ENTRY="## $NEW_VERSION-$CURRENT_RELEASE ($CURRENT_DATE)\n\n"
+          NEW_ENTRY="${NEW_ENTRY}* Visual Studio Code $NEW_VERSION\n"
+          NEW_ENTRY="${NEW_ENTRY}* Portapps 3.16.0\n\n"
+
+          # Add new entry after the first line (# Changelog)
+          sed -i "1a\\$NEW_ENTRY" CHANGELOG.md
+
+          echo "Updated CHANGELOG.md with new version"
+
+      - name: Commit and push changes
+        if: steps.compare.outputs.needs_update == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          git add build.properties CHANGELOG.md
+          git commit -m "Auto-update VS Code to version \
+            ${{ steps.get_version.outputs.latest_version }}"
+          git push
+
+      - name: Create and push tag
+        if: steps.compare.outputs.needs_update == 'true'
+        run: |
+          NEW_VERSION="${{ steps.get_version.outputs.latest_version }}"
+          CURRENT_RELEASE=$(grep "^app.release" build.properties \
+            | cut -d'=' -f2 | tr -d ' ')
+          TAG_NAME="$NEW_VERSION-$CURRENT_RELEASE"
+
+          git tag "$TAG_NAME"
+          git push origin "$TAG_NAME"
+
+          echo "Created and pushed tag: $TAG_NAME"
+
+      - name: Trigger Build
+        if: steps.compare.outputs.needs_update == 'true'
+        run: |
+          NEW_VERSION="${{ steps.get_version.outputs.latest_version }}"
+          CURRENT_RELEASE=$(grep "^app.release" build.properties \
+            | cut -d'=' -f2 | tr -d ' ')
+          TAG_NAME="$NEW_VERSION-$CURRENT_RELEASE"
+
+          echo "Tagged $TAG_NAME - build workflow will be triggered automatically"
+          echo "Release will be created by the build workflow with artifacts"

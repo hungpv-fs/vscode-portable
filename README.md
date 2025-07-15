@@ -22,10 +22,35 @@ The name Visual Studio Code™ as well as related names, marks, emblems and imag
 Visual Studio Code™ portable app made with 🚀 [Portapps](https://portapps.io).<br />
 Documentation and downloads can be found on https://portapps.io/app/vscode-portable/
 
+## 📥 Download
+
+### Official Release Page
+- **GitHub Releases**: https://github.com/hungpv-fs/vscode-portable/releases
+- **GitHub Pages**: https://hungpv-fs.github.io/vscode-portable/
+
+### Latest Release
+[![GitHub release](https://img.shields.io/github/release/hungpv-fs/vscode-portable.svg?style=flat-square)](https://github.com/hungpv-fs/vscode-portable/releases/latest)
+[![GitHub downloads](https://img.shields.io/github/downloads/hungpv-fs/vscode-portable/total.svg?style=flat-square)](https://github.com/hungpv-fs/vscode-portable/releases)
+
+Download the latest release from the links above or visit our [GitHub Pages site](https://hungpv-fs.github.io/vscode-portable/) for a user-friendly download experience.
+
+## Automated Updates
+
+This repository features an automated update system that keeps the portable application current with the latest Visual Studio Code releases:
+
+- **Scheduled Updates**: Runs twice weekly (Sunday and Wednesday at midnight UTC)
+- **Automatic Version Detection**: Checks Microsoft's VS Code repository for latest releases
+- **Smart Updates**: Only updates when new versions are available
+- **Automated Release Process**: Creates new releases with updated binaries
+- **Changelog Maintenance**: Automatically updates changelog with new versions
+
+The system ensures users always have access to the latest VS Code features, bug fixes, and security updates without manual intervention.
+
 ## Contributing
 
 Want to contribute? Awesome! The most basic way to show your support is to star the project, or to raise issues. If
-you want to open a pull request, please read the [contributing guidelines](https://portapps.io/doc/contribute/).
+you want to open a pull request, please read the [contributing guidelines](https://portapps.io/doc/contribute/) and 
+check our [development guide](DEVELOPMENT.md).
 
 You can also support this project by [**becoming a sponsor on GitHub**](https://github.com/sponsors/crazy-max) or by
 making a [Paypal donation](https://www.paypal.me/crazyws) to ensure this journey continues indefinitely!
