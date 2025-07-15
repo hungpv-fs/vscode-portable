@@ -22,6 +22,18 @@ The name Visual Studio Code™ as well as related names, marks, emblems and imag
 Visual Studio Code™ portable app made with 🚀 [Portapps](https://portapps.io).<br />
 Documentation and downloads can be found on https://portapps.io/app/vscode-portable/
 
+## 📥 Download
+
+### Official Release Page
+- **GitHub Releases**: https://github.com/hungpv-fs/vscode-portable/releases
+- **GitHub Pages**: https://hungpv-fs.github.io/vscode-portable/
+
+### Latest Release
+[![GitHub release](https://img.shields.io/github/release/hungpv-fs/vscode-portable.svg?style=flat-square)](https://github.com/hungpv-fs/vscode-portable/releases/latest)
+[![GitHub downloads](https://img.shields.io/github/downloads/hungpv-fs/vscode-portable/total.svg?style=flat-square)](https://github.com/hungpv-fs/vscode-portable/releases)
+
+Download the latest release from the links above or visit our [GitHub Pages site](https://hungpv-fs.github.io/vscode-portable/) for a user-friendly download experience.
+
 ## Automated Updates
 
 This repository features an automated update system that keeps the portable application current with the latest Visual Studio Code releases:

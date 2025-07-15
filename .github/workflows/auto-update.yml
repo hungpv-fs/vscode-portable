@@ -118,7 +118,7 @@ jobs:
 
           echo "Created and pushed tag: $TAG_NAME"
 
-      - name: Create Release
+      - name: Trigger Build
         if: steps.compare.outputs.needs_update == 'true'
         run: |
           NEW_VERSION="${{ steps.get_version.outputs.latest_version }}"
@@ -126,18 +126,5 @@ jobs:
             | cut -d'=' -f2 | tr -d ' ')
           TAG_NAME="$NEW_VERSION-$CURRENT_RELEASE"
 
-          # Create release using GitHub CLI
-          gh release create "$TAG_NAME" \
-            --title "VS Code Portable $NEW_VERSION" \
-            --notes "## VS Code Portable $NEW_VERSION
-
-          Automatically updated to Visual Studio Code $NEW_VERSION
-
-          ### Changes
-          * Updated to Visual Studio Code $NEW_VERSION
-          * Latest bug fixes and security updates from Microsoft
-
-          ### Download
-          The portable application will be built and available shortly."
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo "Tagged $TAG_NAME - build workflow will be triggered automatically"
+          echo "Release will be created by the build workflow with artifacts"

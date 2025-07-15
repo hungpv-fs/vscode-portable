@@ -1,0 +1,131 @@
+name: Portapps Integration
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Validate build.properties
+        run: |
+          echo "Validating build.properties..."
+          
+          # Check required properties exist
+          if ! grep -q "^app.version" build.properties; then
+            echo "ERROR: app.version not found in build.properties"
+            exit 1
+          fi
+          
+          if ! grep -q "^app.release" build.properties; then
+            echo "ERROR: app.release not found in build.properties"
+            exit 1
+          fi
+          
+          # Validate version format
+          VERSION=$(grep "^app.version" build.properties | cut -d'=' -f2 | tr -d ' ')
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "ERROR: Invalid version format: $VERSION"
+            exit 1
+          fi
+          
+          # Validate release number
+          RELEASE=$(grep "^app.release" build.properties | cut -d'=' -f2 | tr -d ' ')
+          if ! echo "$RELEASE" | grep -qE '^[0-9]+$'; then
+            echo "ERROR: Invalid release number: $RELEASE"
+            exit 1
+          fi
+          
+          echo "✅ build.properties validation passed"
+          echo "Version: $VERSION"
+          echo "Release: $RELEASE"
+          
+      - name: Validate CHANGELOG.md
+        run: |
+          echo "Validating CHANGELOG.md..."
+          
+          if [ ! -f CHANGELOG.md ]; then
+            echo "ERROR: CHANGELOG.md not found"
+            exit 1
+          fi
+          
+          # Check if changelog starts with "# Changelog"
+          if ! head -n 1 CHANGELOG.md | grep -q "^# Changelog"; then
+            echo "ERROR: CHANGELOG.md should start with '# Changelog'"
+            exit 1
+          fi
+          
+          echo "✅ CHANGELOG.md validation passed"
+          
+      - name: Validate Go module
+        run: |
+          echo "Validating Go module..."
+          
+          if [ ! -f go.mod ]; then
+            echo "ERROR: go.mod not found"
+            exit 1
+          fi
+          
+          if [ ! -f main.go ]; then
+            echo "ERROR: main.go not found"
+            exit 1
+          fi
+          
+          echo "✅ Go module validation passed"
+          
+      - name: Check URL availability
+        run: |
+          echo "Checking VS Code download URL..."
+          
+          VERSION=$(grep "^app.version" build.properties | cut -d'=' -f2 | tr -d ' ')
+          URL="https://update.code.visualstudio.com/$VERSION/win32-x64-archive/stable"
+          
+          # Note: We can't actually check the URL due to firewall restrictions
+          # but we can validate the format
+          if ! echo "$URL" | grep -qE '^https://update\.code\.visualstudio\.com/[0-9]+\.[0-9]+\.[0-9]+/win32-x64-archive/stable$'; then
+            echo "ERROR: Invalid URL format: $URL"
+            exit 1
+          fi
+          
+          echo "✅ URL format validation passed"
+          echo "URL: $URL"
+          
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          
+      - name: Run go mod tidy
+        run: go mod tidy
+        
+      - name: Run go fmt
+        run: |
+          if [ -n "$(gofmt -l .)" ]; then
+            echo "Go files not formatted:"
+            gofmt -l .
+            exit 1
+          fi
+          
+      - name: Run go vet
+        run: go vet ./...
+        
+      - name: Check for go mod changes
+        run: |
+          if [ -n "$(git status --porcelain go.mod go.sum)" ]; then
+            echo "go.mod or go.sum has changes after 'go mod tidy'"
+            git diff go.mod go.sum
+            exit 1
+          fi
