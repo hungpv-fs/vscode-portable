@@ -22,6 +22,18 @@ The name Visual Studio Code™ as well as related names, marks, emblems and imag
 Visual Studio Code™ portable app made with 🚀 [Portapps](https://portapps.io).<br />
 Documentation and downloads can be found on https://portapps.io/app/vscode-portable/
 
+## Automated Updates
+
+This repository features an automated update system that keeps the portable application current with the latest Visual Studio Code releases:
+
+- **Scheduled Updates**: Runs twice weekly (Sunday and Wednesday at midnight UTC)
+- **Automatic Version Detection**: Checks Microsoft's VS Code repository for latest releases
+- **Smart Updates**: Only updates when new versions are available
+- **Automated Release Process**: Creates new releases with updated binaries
+- **Changelog Maintenance**: Automatically updates changelog with new versions
+
+The system ensures users always have access to the latest VS Code features, bug fixes, and security updates without manual intervention.
+
 ## Contributing
 
 Want to contribute? Awesome! The most basic way to show your support is to star the project, or to raise issues. If
