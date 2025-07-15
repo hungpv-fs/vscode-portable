@@ -120,7 +120,7 @@ jobs:
           fi
           
       - name: Run go vet
-        run: go vet ./...
+        run: GOOS=windows go vet ./...
         
       - name: Check for go mod changes
         run: |
