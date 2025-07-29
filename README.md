@@ -1,13 +1,29 @@
 <p align="center"><a href="https://portapps.io/app/vscode-portable/" target="_blank"><img width="100" src="https://github.com/portapps/vscode-portable/blob/master/res/papp.png"></a></p>
 
 <p align="center">
-  <a href="https://portapps.io/app/vscode-portable/#download"><img src="https://img.shields.io/github/release/portapps/vscode-portable.svg?style=flat-square" alt="GitHub release"></a>
-  <a href="https://portapps.io/app/vscode-portable/#download"><img src="https://img.shields.io/github/downloads/portapps/vscode-portable/total.svg?style=flat-square" alt="Total downloads"></a>
-  <a href="https://github.com/portapps/vscode-portable/actions?workflow=build"><img src="https://img.shields.io/github/actions/workflow/status/portapps/vscode-portable/build.yml?label=build&logo=github&style=flat-square" alt="Build Status"></a>
-  <a href="https://goreportcard.com/report/github.com/portapps/vscode-portable"><img src="https://goreportcard.com/badge/github.com/portapps/vscode-portable?style=flat-square" alt="Go Report"></a>
+  <a href="https://github.com/hungpv-fs/vscode-portable/releases/latest"><img src="https://img.shields.io/github/release/hungpv-fs/vscode-portable.svg?style=flat-square" alt="GitHub release"></a>
+  <a href="https://github.com/hungpv-fs/vscode-portable/releases"><img src="https://img.shields.io/github/downloads/hungpv-fs/vscode-portable/total.svg?style=flat-square" alt="Total downloads"></a>
+  <a href="https://github.com/hungpv-fs/vscode-portable/actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/hungpv-fs/vscode-portable/build.yml?label=build&logo=github&style=flat-square" alt="Build Status"></a>
+  <a href="https://goreportcard.com/report/github.com/hungpv-fs/vscode-portable"><img src="https://goreportcard.com/badge/github.com/portapps/vscode-portable?style=flat-square" alt="Go Report"></a>
   <br /><a href="https://github.com/sponsors/crazy-max"><img src="https://img.shields.io/badge/sponsor-crazy--max-181717.svg?logo=github&style=flat-square" alt="Become a sponsor"></a>
   <a href="https://www.paypal.me/crazyws"><img src="https://img.shields.io/badge/donate-paypal-00457c.svg?logo=paypal&style=flat-square" alt="Donate Paypal"></a>
 </p>
+
+---
+
+## 🚀 **Quick Download**
+
+<div align="center">
+
+### **Latest VS Code Portable 1.102.3**
+
+**[📦 Download ZIP](https://github.com/hungpv-fs/vscode-portable/releases/latest)** • **[🌐 GitHub Pages](https://hungpv-fs.github.io/vscode-portable/)** • **[📋 All Releases](https://github.com/hungpv-fs/vscode-portable/releases)**
+
+*Portable Visual Studio Code - No installation required!*
+
+</div>
+
+---
 
 ## Notice of Non-Affiliation and Disclaimer
 
