@@ -7,6 +7,11 @@ on:
       - '*'
   pull_request:
 
+permissions:
+  contents: write
+  packages: write
+  actions: read
+
 jobs:
   build:
     uses: portapps/.github/.github/workflows/app-build.yml@master
@@ -33,11 +38,27 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          name: release-artifact
           path: ./artifacts/
+          
+      - name: List artifacts
+        run: |
+          echo "Available artifacts:"
+          find ./artifacts/ -type f -name "*.zip" -o -name "*.exe" | head -20
           
       - name: Create Release
         run: |
+          # Find artifact files
+          ARTIFACT_FILES=$(find ./artifacts/ -type f -name "*.zip" -o -name "*.exe" | tr '\n' ' ')
+          
+          if [ -z "$ARTIFACT_FILES" ]; then
+            echo "ERROR: No artifact files found!"
+            echo "Available files:"
+            find ./artifacts/ -type f | head -20
+            exit 1
+          fi
+          
+          echo "Creating release with artifacts: $ARTIFACT_FILES"
+          
           gh release create "${{ steps.release_info.outputs.tag_name }}" \
             --title "VS Code Portable ${{ steps.release_info.outputs.version }}" \
             --notes "## VS Code Portable ${{ steps.release_info.outputs.version }}
@@ -63,6 +84,6 @@ jobs:
           - This is a portable version that stores all settings and extensions in the application folder
           - No installation required - just extract and run
           - Fully compatible with official VS Code extensions and settings" \
-            ./artifacts/*
+            $ARTIFACT_FILES
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

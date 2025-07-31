@@ -17,6 +17,11 @@ on:
         type: boolean
         default: true
 
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
 jobs:
   manual-release:
     runs-on: ubuntu-latest
