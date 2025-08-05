@@ -7,6 +7,10 @@ on:
   schedule:
     # Update pages daily at 2 AM UTC
     - cron: '0 2 * * *'
+  workflow_run:
+    workflows: ["build"]
+    types: [completed]
+    branches: [main, master]
 
 permissions:
   contents: read
@@ -31,6 +35,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+          
+      - name: Download latest build artifacts
+        if: github.event_name == 'workflow_run'
+        uses: actions/download-artifact@v4
+        with:
+          name: vscode-portable-artifacts
+          path: ./latest-artifacts/
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
           
       - name: Generate release page
         run: |
@@ -181,6 +194,16 @@ jobs:
               </div>
 
               <div class="info-section">
+                  <h3>🔄 Builds & Releases</h3>
+                  <p>This project provides VS Code Portable in two ways:</p>
+                  <ul>
+                      <li><strong>🚀 Development Builds:</strong> Created automatically on every code change. Get the latest features immediately but may be less stable.</li>
+                      <li><strong>📋 Stable Releases:</strong> Official releases created when new VS Code versions are available. These are thoroughly tested and recommended for production use.</li>
+                  </ul>
+                  <p>Both types are shown above - development builds are highlighted in green/blue borders.</p>
+              </div>
+
+              <div class="info-section">
                   <h3>🔄 Automatic Updates</h3>
                   <p>This repository automatically checks for new VS Code releases twice weekly (Sunday and Wednesday at midnight UTC) and creates updated portable versions with the latest features and security fixes.</p>
               </div>
@@ -202,8 +225,16 @@ jobs:
                           const releasesContainer = document.getElementById('releases');
                           releasesContainer.innerHTML = '';
                           
+                          // Add latest build artifacts section if available
+                          const latestArtifacts = await loadLatestArtifacts();
+                          if (latestArtifacts) {
+                              releasesContainer.appendChild(latestArtifacts);
+                          }
+                          
                           if (releases.length === 0) {
-                              releasesContainer.innerHTML = '<p>No releases available yet.</p>';
+                              const noReleases = document.createElement('div');
+                              noReleases.innerHTML = '<p>No stable releases available yet.</p>';
+                              releasesContainer.appendChild(noReleases);
                               return;
                           }
                           
@@ -239,6 +270,85 @@ jobs:
                           console.error('Error loading releases:', error);
                           document.getElementById('releases').innerHTML = 
                               '<p>Error loading releases. Please visit the <a href="https://github.com/hungpv-fs/vscode-portable/releases">GitHub releases page</a> directly.</p>';
+                      }
+                  }
+                  
+                  async function loadLatestArtifacts() {
+                      try {
+                          // Check if we have workflow run data (triggered by build completion)
+                          const urlParams = new URLSearchParams(window.location.search);
+                          const workflowRun = urlParams.get('workflow_run');
+                          
+                          if (workflowRun) {
+                              const workflowResponse = await fetch(`https://api.github.com/repos/hungpv-fs/vscode-portable/actions/runs/${workflowRun}`);
+                              const workflowData = await workflowResponse.json();
+                              
+                              if (workflowData.conclusion === 'success') {
+                                  const artifactsResponse = await fetch(`https://api.github.com/repos/hungpv-fs/vscode-portable/actions/runs/${workflowRun}/artifacts`);
+                                  const artifactsData = await artifactsResponse.json();
+                                  
+                                  const vscodeArtifacts = artifactsData.artifacts.filter(artifact => 
+                                      artifact.name === 'vscode-portable-artifacts'
+                                  );
+                                  
+                                  if (vscodeArtifacts.length > 0) {
+                                      const latestCard = document.createElement('div');
+                                      latestCard.className = 'release-card';
+                                      latestCard.style.border = '2px solid #28a745';
+                                      latestCard.style.backgroundColor = '#f8fff8';
+                                      
+                                      latestCard.innerHTML = `
+                                          <div class="release-title">🚀 Latest Build (Development)</div>
+                                          <div class="release-date">Built: ${new Date(workflowData.updated_at).toLocaleDateString()}</div>
+                                          <div style="margin: 15px 0; padding: 10px; background: #d4edda; border-radius: 4px; color: #155724;">
+                                              <strong>⚠️ Development Build:</strong> This is the latest development build from the main branch. 
+                                              While it includes the newest features and updates, it may be less stable than official releases.
+                                          </div>
+                                          <div class="download-buttons">
+                                              <a href="https://github.com/hungpv-fs/vscode-portable/actions/runs/${workflowRun}" class="download-btn">
+                                                  View Build Details & Download Artifacts
+                                              </a>
+                                          </div>
+                                      `;
+                                      
+                                      return latestCard;
+                                  }
+                              }
+                          }
+                          
+                          // Fallback: check for latest workflow run
+                          const workflowsResponse = await fetch('https://api.github.com/repos/hungpv-fs/vscode-portable/actions/workflows/build.yml/runs?status=success&per_page=1');
+                          const workflowsData = await workflowsResponse.json();
+                          
+                          if (workflowsData.workflow_runs && workflowsData.workflow_runs.length > 0) {
+                              const latestRun = workflowsData.workflow_runs[0];
+                              
+                              const latestCard = document.createElement('div');
+                              latestCard.className = 'release-card';
+                              latestCard.style.border = '2px solid #007acc';
+                              latestCard.style.backgroundColor = '#f8f9ff';
+                              
+                              latestCard.innerHTML = `
+                                  <div class="release-title">📦 Latest Successful Build</div>
+                                  <div class="release-date">Built: ${new Date(latestRun.updated_at).toLocaleDateString()}</div>
+                                  <div style="margin: 15px 0; padding: 10px; background: #cce5ff; border-radius: 4px; color: #0c5aa6;">
+                                      <strong>ℹ️ Latest Build:</strong> This represents the most recent successful build. 
+                                      Download artifacts to get the latest version with newest features.
+                                  </div>
+                                  <div class="download-buttons">
+                                      <a href="https://github.com/hungpv-fs/vscode-portable/actions/runs/${latestRun.id}" class="download-btn">
+                                          View Build & Download Artifacts
+                                      </a>
+                                  </div>
+                              `;
+                              
+                              return latestCard;
+                          }
+                          
+                          return null;
+                      } catch (error) {
+                          console.error('Error loading latest artifacts:', error);
+                          return null;
                       }
                   }
                   
