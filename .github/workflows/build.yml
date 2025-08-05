@@ -19,7 +19,6 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -45,7 +44,15 @@ jobs:
           echo "Available artifacts:"
           find ./artifacts/ -type f -name "*.zip" -o -name "*.exe" | head -20
           
+      - name: Upload artifacts for other workflows
+        uses: actions/upload-artifact@v4
+        with:
+          name: vscode-portable-artifacts
+          path: ./artifacts/
+          retention-days: 30
+          
       - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
           # Find artifact files
           ARTIFACT_FILES=$(find ./artifacts/ -type f -name "*.zip" -o -name "*.exe" | tr '\n' ' ')
@@ -87,3 +94,19 @@ jobs:
             $ARTIFACT_FILES
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Artifact Summary
+        run: |
+          echo "## Build Artifacts Summary" >> $GITHUB_STEP_SUMMARY
+          echo "The following artifacts were built:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          find ./artifacts/ -type f -name "*.zip" -o -name "*.exe" | while read file; do
+            size=$(stat --format="%s" "$file" | numfmt --to=iec)
+            echo "- **$(basename "$file")** (${size})" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ startsWith(github.ref, 'refs/tags/') }}" = "true" ]; then
+            echo "✅ GitHub release created with tag ${{ steps.release_info.outputs.tag_name }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "📦 Artifacts uploaded to workflow storage (GitHub release not created - no tag)" >> $GITHUB_STEP_SUMMARY
+          fi
