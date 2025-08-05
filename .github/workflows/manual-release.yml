@@ -1,0 +1,121 @@
+name: Manual Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'VS Code version (e.g., 1.103.0)'
+        required: true
+        type: string
+      release_number:
+        description: 'Release number (increment from current)'
+        required: true
+        type: string
+      create_tag:
+        description: 'Create and push tag to trigger build'
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  manual-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Validate inputs
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          RELEASE="${{ github.event.inputs.release_number }}"
+          
+          # Validate version format
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "ERROR: Invalid version format: $VERSION"
+            exit 1
+          fi
+          
+          # Validate release number
+          if ! echo "$RELEASE" | grep -qE '^[0-9]+$'; then
+            echo "ERROR: Invalid release number: $RELEASE"
+            exit 1
+          fi
+          
+          echo "✅ Input validation passed"
+          echo "Version: $VERSION"
+          echo "Release: $RELEASE"
+          
+      - name: Update build.properties
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          RELEASE="${{ github.event.inputs.release_number }}"
+          
+          # Update version and release
+          sed -i "s/^app.version = .*/app.version = $VERSION/" build.properties
+          sed -i "s/^app.release = .*/app.release = $RELEASE/" build.properties
+          
+          echo "✅ build.properties updated"
+          
+      - name: Update CHANGELOG.md
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          RELEASE="${{ github.event.inputs.release_number }}"
+          CURRENT_DATE=$(date +%Y/%m/%d)
+          
+          # Create new changelog entry
+          NEW_ENTRY="## $VERSION-$RELEASE ($CURRENT_DATE)\n\n"
+          NEW_ENTRY="${NEW_ENTRY}* Visual Studio Code $VERSION\n"
+          NEW_ENTRY="${NEW_ENTRY}* Portapps 3.16.0\n\n"
+          
+          # Add new entry after the first line (# Changelog)
+          sed -i "1a\\$NEW_ENTRY" CHANGELOG.md
+          
+          echo "✅ CHANGELOG.md updated"
+          
+      - name: Commit changes
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          git add build.properties CHANGELOG.md
+          git commit -m "Manual release: Update VS Code to version $VERSION"
+          git push
+          
+      - name: Create and push tag
+        if: github.event.inputs.create_tag == 'true'
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          RELEASE="${{ github.event.inputs.release_number }}"
+          TAG_NAME="$VERSION-$RELEASE"
+          
+          git tag "$TAG_NAME"
+          git push origin "$TAG_NAME"
+          
+          echo "✅ Tag $TAG_NAME created and pushed"
+          echo "🚀 Build workflow will trigger automatically"
+          
+      - name: Summary
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          RELEASE="${{ github.event.inputs.release_number }}"
+          TAG_NAME="$VERSION-$RELEASE"
+          
+          echo "## Manual Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: $VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release**: $RELEASE" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag**: $TAG_NAME" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ✅ Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The build workflow will automatically:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Build the portable application" >> $GITHUB_STEP_SUMMARY
+          echo "2. Create GitHub release with artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "3. Update GitHub Pages with download links" >> $GITHUB_STEP_SUMMARY

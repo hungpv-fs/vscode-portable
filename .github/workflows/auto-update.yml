@@ -9,6 +9,11 @@ name: Auto Update VS Code
     - cron: '0 0 * * 3'
   workflow_dispatch:  # Allow manual triggering
 
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
 jobs:
   check-and-update:
     runs-on: ubuntu-latest
@@ -18,19 +23,38 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
       - name: Get latest VS Code version
         id: get_version
         run: |
           # Get latest release from VS Code repository
-          LATEST_VERSION=$(curl -s \
+          echo "Fetching latest VS Code version from Microsoft..."
+          LATEST_VERSION=$(curl -s -m 30 \
+            -H "Accept: application/vnd.github.v3+json" \
             https://api.github.com/repos/microsoft/vscode/releases/latest \
-            | jq -r '.tag_name')
+            | jq -r '.tag_name' 2>/dev/null || echo "")
+
+          # Fallback if GitHub API fails
+          if [ -z "$LATEST_VERSION" ] || [ "$LATEST_VERSION" = "null" ]; then
+            echo "GitHub API failed, trying alternative method..."
+            LATEST_VERSION=$(curl -s -m 30 https://code.visualstudio.com/api/update/win32-x64-archive/stable \
+              | jq -r '.name' 2>/dev/null || echo "")
+          fi
+
+          # Final fallback - check releases page directly
+          if [ -z "$LATEST_VERSION" ] || [ "$LATEST_VERSION" = "null" ]; then
+            echo "Alternative API failed, trying releases page scraping..."
+            LATEST_VERSION=$(curl -s -m 30 https://github.com/microsoft/vscode/releases/latest \
+              | grep -oP 'tag/\K[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "")
+          fi
 
           # Validate version format (should be like 1.xx.x)
           if ! echo "$LATEST_VERSION" | \
                grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "ERROR: Invalid version format: $LATEST_VERSION"
+            echo "ERROR: Could not fetch valid VS Code version"
+            echo "Received response: '$LATEST_VERSION'"
+            echo "This might be due to network restrictions or API rate limits"
             exit 1
           fi
 
@@ -84,13 +108,11 @@ jobs:
             | cut -d'=' -f2 | tr -d ' ')
           CURRENT_DATE=$(date +%Y/%m/%d)
 
-          # Create new changelog entry
-          NEW_ENTRY="## $NEW_VERSION-$CURRENT_RELEASE ($CURRENT_DATE)\n\n"
-          NEW_ENTRY="${NEW_ENTRY}* Visual Studio Code $NEW_VERSION\n"
-          NEW_ENTRY="${NEW_ENTRY}* Portapps 3.16.0\n\n"
+          # Create new changelog entry - fix the sed command syntax
+          NEW_ENTRY="## $NEW_VERSION-$CURRENT_RELEASE ($CURRENT_DATE)\\n\\n* Visual Studio Code $NEW_VERSION\\n* Portapps 3.16.0\\n"
 
           # Add new entry after the first line (# Changelog)
-          sed -i "1a\\$NEW_ENTRY" CHANGELOG.md
+          sed -i "1a\\\\$NEW_ENTRY" CHANGELOG.md
 
           echo "Updated CHANGELOG.md with new version"
 
@@ -100,10 +122,26 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
+          # Ensure we're on the main branch
+          git checkout main || git checkout master || echo "Using current branch"
+          
+          # Pull latest changes to avoid conflicts
+          git pull origin || echo "No remote changes to pull"
+
           git add build.properties CHANGELOG.md
           git commit -m "Auto-update VS Code to version \
             ${{ steps.get_version.outputs.latest_version }}"
-          git push
+          
+          # Push with retry logic
+          for i in {1..3}; do
+            if git push; then
+              echo "Successfully pushed changes"
+              break
+            else
+              echo "Push failed, attempt $i/3. Pulling and retrying..."
+              git pull --rebase origin
+            fi
+          done
 
       - name: Create and push tag
         if: steps.compare.outputs.needs_update == 'true'
@@ -112,6 +150,13 @@ jobs:
           CURRENT_RELEASE=$(grep "^app.release" build.properties \
             | cut -d'=' -f2 | tr -d ' ')
           TAG_NAME="$NEW_VERSION-$CURRENT_RELEASE"
+
+          # Check if tag already exists
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Tag $TAG_NAME already exists, deleting and recreating..."
+            git tag -d "$TAG_NAME" || true
+            git push --delete origin "$TAG_NAME" || true
+          fi
 
           git tag "$TAG_NAME"
           git push origin "$TAG_NAME"
@@ -128,3 +173,20 @@ jobs:
 
           echo "Tagged $TAG_NAME - build workflow will be triggered automatically"
           echo "Release will be created by the build workflow with artifacts"
+          
+      - name: Update Summary
+        if: always()
+        run: |
+          echo "## Auto-Update Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Current Version**: ${{ steps.current_version.outputs.current_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Latest Version**: ${{ steps.get_version.outputs.latest_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Update Needed**: ${{ steps.compare.outputs.needs_update }}" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.compare.outputs.needs_update }}" = "true" ]; then
+            CURRENT_RELEASE=$(grep "^app.release" build.properties | cut -d'=' -f2 | tr -d ' ')
+            TAG_NAME="${{ steps.get_version.outputs.latest_version }}-$CURRENT_RELEASE"
+            echo "- **New Tag Created**: $TAG_NAME" >> $GITHUB_STEP_SUMMARY
+            echo "- **Status**: ✅ Build triggered automatically" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Status**: ✅ Already up to date" >> $GITHUB_STEP_SUMMARY
+          fi
