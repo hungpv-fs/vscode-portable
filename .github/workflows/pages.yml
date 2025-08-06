@@ -38,7 +38,7 @@ jobs:
           
       - name: Download latest build artifacts
         if: github.event_name == 'workflow_run'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: vscode-portable-artifacts
           path: ./latest-artifacts/
