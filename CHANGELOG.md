@@ -1,4 +1,9 @@
 # Changelog
+## 1.107.0-67 (2025/12/14)
+
+* Visual Studio Code 1.107.0
+* Portapps 3.16.0
+
 ## 1.106.3-66 (2025/11/30)
 
 * Visual Studio Code 1.106.3
